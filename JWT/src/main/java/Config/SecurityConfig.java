@@ -2,12 +2,16 @@ package Config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -32,8 +36,16 @@ public class SecurityConfig {
         this.rsaKeys = rsaKeys;
     }
     
+    
+    @Bean
+    public AuthenticationManager authManager(UserDetailsService userDetailsService) {		//To authenticate the particular username and password
+        var authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        return new ProviderManager(authProvider);
+    }
+    
 	@Bean
-	public InMemoryUserDetailsManager users() {
+	public InMemoryUserDetailsManager users() {					//For developing purposes
 	    return new InMemoryUserDetailsManager(
 	            User.withUsername("dvega")
 	                    .password("{noop}password")
@@ -46,12 +58,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable()) // (1)
-                .authorizeRequests( auth -> auth
+                .authorizeRequests( auth -> auth	
+                		.mvcMatchers("/token").permitAll()
                         .anyRequest().authenticated() // (2)
                 )
                 .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // (3)
-                .httpBasic(Customizer.withDefaults()) // (4)
+//                .httpBasic(Customizer.withDefaults()) // (4)
                 .build();
     }
     
